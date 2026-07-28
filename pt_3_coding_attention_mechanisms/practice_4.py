@@ -4,7 +4,7 @@ import torch
 
 class MultiHeadAttention(torch.nn.Module):
 
-    def __init__(self, embedding_dim: int, num_heads: int, context_length: int, qkv_bias: bool = False) -> None:
+    def __init__(self, embedding_dim: int, num_heads: int, dropout: float, context_length: int, qkv_bias: bool = False) -> None:
         super().__init__()
 
         assert embedding_dim % num_heads == 0
@@ -17,6 +17,7 @@ class MultiHeadAttention(torch.nn.Module):
         self.value_proj = torch.nn.Linear(in_features=embedding_dim, out_features=embedding_dim, bias=qkv_bias)
         self.output_proj = torch.nn.Linear(in_features=embedding_dim, out_features=embedding_dim, bias=qkv_bias)
 
+        self.dropout = torch.nn.Dropout(dropout)
         self.register_buffer("mask", torch.triu(torch.ones(context_length, context_length, dtype=torch.bool), diagonal=1))
 
     def split_to_heads(self, x: torch.Tensor) -> torch.Tensor:
@@ -45,6 +46,7 @@ class MultiHeadAttention(torch.nn.Module):
 
         # Normalize attention scores to weights
         attention_weights = torch.softmax((attention_scores / self.head_dim**0.5), dim=-1)
+        attention_weights = self.dropout(attention_weights)
 
         context_vec = attention_weights @ values
 
@@ -55,6 +57,6 @@ class MultiHeadAttention(torch.nn.Module):
         return self.output_proj(context_vec)
 
 
-x = MultiHeadAttention(512, 8, 10)
+x = MultiHeadAttention(512, 8, 0.1, 10)
 input = torch.rand(size=(16, 10, 512))
 print(x(input).shape)
