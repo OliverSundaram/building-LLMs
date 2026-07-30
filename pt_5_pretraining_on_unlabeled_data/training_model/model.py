@@ -128,17 +128,18 @@ class GPT2Model(nn.Module):
 
         self.final_norm = LayerNorm(cfg["emb_dim"])
         self.linear_out = nn.Linear(cfg["emb_dim"], cfg["vocab_size"])
+        self.dropout = nn.Dropout(cfg["drop_rate"])
 
     def forward(self, x: torch.Tensor):
         batch, seq = x.shape
         tok_emb = self.tok_emb(x)
         pos_emb = self.pos_emb(torch.arange(seq, device=x.device))
 
-        return self.linear_out(self.final_norm(self.transformer_blocks(tok_emb + pos_emb)))
+        return self.linear_out(self.final_norm(self.transformer_blocks(self.dropout(tok_emb + pos_emb))))
 
 
 
-def test(model: GPT2Model, sample_text: str, tokenizer, device: torch.device, max_new_tokens: int, temp: int, top_k: int):
+def test(model: GPT2Model, sample_text: str, tokenizer, device: torch.device, max_new_tokens: int, temp: int | float, top_k: int):
     ids = tokenizer.encode(sample_text, allowed_special={"<|endoftext|>"})
     ids = torch.tensor(ids).unsqueeze(0).to(device)
 
