@@ -129,10 +129,7 @@ class GPTModel(nn.Module):
 
         return self.out_head(self.final_norm(self.transformer_blocks(self.drop_emb(tok_emb + pos_emb))))
 
-def generate_text(model, text, max_new_tokens, context_size):
-
-    idx = tokenizer.encode(text)
-    idx = torch.tensor(idx).unsqueeze(0)
+def generate_text_simple(model, idx, max_new_tokens, context_size):
 
     for _ in range(max_new_tokens):
         idx_cond = idx[:, -context_size:]
@@ -145,30 +142,34 @@ def generate_text(model, text, max_new_tokens, context_size):
         idx_next = torch.argmax(probs, dim=-1, keepdim=True)
         idx = torch.cat((idx, idx_next), dim=1)
 
-    idx = idx.squeeze()
-    idx = idx.tolist()
-    text = tokenizer.decode(idx)
+    return idx
 
-    return text
+if __name__ == "__main__":
+    GPT_CONFIG = {
+        "vocab_size": 50257,
+        "context_length": 1024,
+        "emb_dim": 768,
+        "n_heads": 12,
+        "n_layers": 12,
+        "drop_rate": 0.1,
+        "qkv_bias": False
+    }
 
-GPT_CONFIG = {
-    "vocab_size": 50257,
-    "context_length": 1024,
-    "emb_dim": 768,
-    "n_heads": 12,
-    "n_layers": 12,
-    "drop_rate": 0.1,
-    "qkv_bias": False
-}
+    start_context = "Hello, I am"
+    model = GPTModel(GPT_CONFIG)
 
-start_context = "Hello, I am"
-model = GPTModel(GPT_CONFIG)
+    idx = tokenizer.encode(start_context)
+    idx = torch.tensor(idx).unsqueeze(0)
 
-out = generate_text(
-    model=model,
-    text=start_context,
-    max_new_tokens=6,
-    context_size=GPT_CONFIG["context_length"]
-)
+    out = generate_text_simple(
+        model=model,
+        idx=idx,
+        max_new_tokens=6,
+        context_size=GPT_CONFIG["context_length"]
+    )
 
-print(out)
+    out = out.squeeze()
+    out = out.tolist()
+    text = tokenizer.decode(out)
+
+    print(text)
